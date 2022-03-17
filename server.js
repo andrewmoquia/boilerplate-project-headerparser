@@ -1,76 +1,41 @@
+// server.js
+// where your node app starts
+
+// init project
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const app = express();
-const mongoose = require('mongoose');
-const {Schema, model} = require('mongoose');
+var express = require('express');
+var app = express();
 
-// Basic Configuration
-const port = process.env.PORT || 3000;
-const mongoURI = process.env.MONGO_URI || "mongouri";
+// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
+// so that your API is remotely testable by FCC 
+var cors = require('cors');
+app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
 
-(async () => {
-  mongoose
-  .connect(`${mongoURI}`)
-  .then(() => {
-     console.log('Successfully connected to the mongo database.');
-  })
-  .catch((err) => { console.log(err); })
-})()
+// http://expressjs.com/en/starter/static-files.html
+app.use(express.static('public'));
 
-const shortenURLSchema = new Schema({
-  original_url: {type: String},
-  short_url: {type: Number}
+// http://expressjs.com/en/starter/basic-routing.html
+app.get("/", function (req, res) {
+  res.sendFile(__dirname + '/views/index.html');
 });
 
-const SHORTEN_URL = model('Shorten URL', shortenURLSchema);
 
-app.use(cors());
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: false }));
-
-app.use('/public', express.static(`${process.cwd()}/public`));
-
-app.get('/', function(req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+// your first API endpoint... 
+app.get("/api/hello", function (req, res) {
+  res.json({greeting: 'hello API'});
 });
 
-// Your first API endpoint
-app.get('/api/hello', function(req, res) {
-  res.json({ greeting: 'hello API' });
-});
-
-app.post('/api/shorturl', function(req, res) {
+app.get("/api/whoami", function (req, res) {
+  const software = req.headers["user-agent"];
+  const language = req.headers["accept-language"];
+  const ipaddress = req.headers["x-forwarded-for"];
   
-   SHORTEN_URL.count({}, (err, count) => {
-    if(err) throw err;
-     
-    const url = new SHORTEN_URL({
-      original_url: req.body.url,
-      short_url: count
-    })
-
-    url.save((err, done) => {
-      if(err) console.log(err);
-      const {original_url, short_url} = done;
-      res.json({original_url, short_url});
-    })
-  });
-  
+  res.json({ipaddress, language, software});
 });
 
-app.get('/api/shorturl/:short_url', function(req, res) {
-  const { short_url } = req.params;
-  SHORTEN_URL.findOne({ short_url }, (err, result) => {
-    if(err) throw err;
-    if(!result) res.json({error: 'invalid url'});
-    res.redirect(result.original_url);
-  })
 
-});
 
-app.listen(port, function() {
-  console.log(`Listening on port ${port}`);
+// listen for requests :)
+var listener = app.listen(process.env.PORT, function () {
+  console.log('Your app is listening on port ' + listener.address().port);
 });
